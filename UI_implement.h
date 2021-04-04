@@ -44,13 +44,17 @@ void BasicUI::CoutMiddle(string str) {
     cout << setw(width) << right << str.substr(0, str.size() / 2);
     cout << setw(width) << left << str.substr(str.size() / 2, str.size() / 2 + 1);
 }  // CoutMiddle
+void BasicUI::CoutMiddleTitle(string str) {
+    cout << underline << setw(width) << right << str.substr(0, str.size() / 2);
+    cout << setw(width) << left << str.substr(str.size() / 2, str.size() / 2 + 1) << off;
+}  // CoutMiddle
 
 void BasicUI::Set_choice_position(int choice, int previous_choice) {
     gotoxy(instructions[previous_choice].position);
-    SetColor(240);
+    SetColor(optionColor);
     CoutMiddle(instructions[previous_choice].str);
     gotoxy(instructions[choice].position);
-    SetColor(176);
+    SetColor(choiceColor);
     string str;
     str = "< " + instructions[choice].str + " >";
     CoutMiddle(str);
@@ -128,25 +132,39 @@ void BasicUI::PrintFileStatus(string str, int Y) {
 }  // PrintFileStatus
 
 void BasicUI::Instructions() {
-    string str1 = title;
-    string str2 = "Use UP and DOWN to control";
     cout << endl;
-    SetColor(224);
-    CoutMiddle(str1);
-    SetColor(7);
-    cout << endl;
-    SetColor(236);
-    CoutMiddle(str2);
-    SetColor(7);
-    cout << endl;
+    if (title.empty() || instructions.empty()) {
+        if (title.empty() && instructions.empty()) {
+            throw "Both Title and Options did not correctly be set";
+        }  // if
+        else if (title.empty() && !instructions.empty()) {
+            throw "Title did not correctly be set";
+        }  // else if
+        else if (title.empty() && !instructions.empty()) {
+            throw "Options did not correctly be set";
+        }  // else if
+    }      // if
+
+    for (int i = 0; i < title.size(); i++) {
+        SetColor(titleColor);
+        if (title[i].bold) {
+            CoutMiddleTitle(title[i].str);
+        }  // if
+        else {
+            CoutMiddle(title[i].str);
+        }  // else
+
+        SetColor(7);
+        cout << endl;
+    }  // for
+
     for (int i = 0; i < instructions.size(); i++) {
-        SetColor(240);
+        SetColor(optionColor);
         CoutMiddle(instructions[i].str);
         SetColor(7);
         cout << endl;
     }  // for
 
-    cout << endl;
 }  // Instructions()
 
 void BasicUI::RemoveElement(string& str, const char ch) {
@@ -263,51 +281,69 @@ void BasicUI::SetColor(int color) {
 }  // SetColor
 
 int BasicUI::IO() {
-    COORD start = GetConsoleCursorPosition();
-    COORD temp = start;
-    temp.Y = temp.Y + 2;
-    for (int i = 0; i < instructions.size(); i++) {
-        temp.Y++;
-        instructions[i].position.X = 0;
-        instructions[i].position.Y = temp.Y;
-    }  // for
+    try {
+        Instructions();
+        COORD start = GetConsoleCursorPosition();
+        COORD temp = start;
+        temp.Y = temp.Y - instructions.size();
+        for (int i = 0; i < instructions.size(); i++) {
+            instructions[i].position.X = 0;
+            instructions[i].position.Y = temp.Y;
+            temp.Y++;
+        }  // for
 
-    Instructions();
-    COORD nextposition = GetConsoleCursorPosition();
-    int previousChoice = choice;
-    Set_choice_position(choice, previousChoice);
-    while (true) {
-        previousChoice = choice;
-        char ch = getch();
-        if (ch == -32) {
-            ch = getch();
-            if (ch == 72) {
-                choice--;
-                if (choice < 0) {
-                    choice = instructions.size() - 1;
-                }  // if
-            }      // if
-            else if (ch == 80) {
-                choice++;
-                if (choice > instructions.size() - 1) {
-                    choice = 0;
-                }  // if
-            }      // else if
-        }          // if
-
-        else if (ch == '\r') {
-            gotoxy(nextposition);
-            SetColor(7);
-            return choice;
-        }  // else if
-
+        COORD nextposition = GetConsoleCursorPosition();
+        int previousChoice = choice;
         Set_choice_position(choice, previousChoice);
+        while (true) {
+            previousChoice = choice;
+            char ch = getch();
+            if (ch == -32) {
+                ch = getch();
+                if (ch == 72) {
+                    choice--;
+                    if (choice < 0) {
+                        choice = instructions.size() - 1;
+                    }  // if
+                }      // if
+                else if (ch == 80) {
+                    choice++;
+                    if (choice > instructions.size() - 1) {
+                        choice = 0;
+                    }  // if
+                }      // else if
+            }          // if
 
-    }  // while
+            else if (ch == '\r') {
+                gotoxy(nextposition);
+                SetColor(7);
+                return choice;
+            }  // else if
+
+            Set_choice_position(choice, previousChoice);
+
+        }  // while
+    } catch (const char* str) {
+        cout << "Error! " << str << endl;
+        system("pause");
+    }  // catch
+
+    return -1;
 }  // IO
 
-void BasicUI::SetTitle(string title) {
-    this->title = title;
+void BasicUI::SetTitle(string title, bool bold) {
+    this->title.clear();
+    TitleType temp;
+    temp.bold = bold;
+    temp.str = title;
+    this->title.push_back(temp);
+}  // SetTitle
+
+void BasicUI::AddTitle(string title, bool bold) {
+    TitleType temp;
+    temp.bold = bold;
+    temp.str = title;
+    this->title.push_back(temp);
 }  // SetTitle
 
 void BasicUI::AddOptions(string option) {
@@ -319,8 +355,35 @@ void BasicUI::SetWidth(int width) {
 }  // SetWidth
 
 BasicUI::BasicUI() {
-    title = "Please Set your own title using SetTitle()";
     choice = 0;
     width = 30;
+    titleColor = 224;
+    optionColor = 240;
+    choiceColor = 176;
     system("cls");
 }  // BasicUI
+
+void BasicUI::ClearOptions() {
+    BasicUI::instructions.clear();
+}  // ClearOptions
+
+void BasicUI::ClearTitle() {
+    BasicUI::title.clear();
+}  // ClearOptions
+
+void BasicUI::EraseOptions(const int index) {
+    BasicUI::instructions.erase(BasicUI::instructions.begin() + index);
+}  // EraseOptions
+
+void BasicUI::SetTitleColor(int color) {
+    titleColor = color;
+    ;
+}  // SetTitleColor
+
+void BasicUI::SetOptionColor(int color) {
+    optionColor = color;
+}  // SetOptionColor
+
+void BasicUI::SetChoiceColor(int color) {
+    choiceColor = color;
+}  // SetChoiceColor

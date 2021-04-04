@@ -13,19 +13,32 @@
 #include <string>
 #include <vector>
 using namespace std;
-
 class BasicUI {
    private:
-    string title;
+    const string bold = "\033[1m";
+
+    const string off = "\033[0m";
+
+    const string underline = "\033[4m";
+
     int choice;  // 記憶上次選項
     string name[16];
     int width;  // 控制UI寬度
+    int titleColor;
+    int optionColor;
+    int choiceColor;
 
     struct Instruction {
         string str;
         COORD position;
     };  // struct Instruction
 
+    struct TitleType {
+        string str;
+        bool bold;
+    };
+
+    vector<TitleType> title;
     vector<Instruction> instructions;
 
     Instruction Create_instructions(string str);
@@ -39,6 +52,8 @@ class BasicUI {
     void SetKeyBoard(int num);
 
     void CoutMiddle(string str);
+
+    void CoutMiddleTitle(string str);
 
     void Set_choice_position(int choice, int previous_choice);
 
@@ -54,17 +69,32 @@ class BasicUI {
 
     void Print_symbol(const char ch, const int amount);
 
+    /**回傳name + add_name字串*/
+    static string CreateFilename(string name, string add_name);
+
    protected:
     /**更改標題*/
-    void SetTitle(string title);
+    void SetTitle(string title, bool bold);
+    /**加入標題(行)*/
+    void AddTitle(string line, bool bold);
     /**更改UI寬度*/
     void SetWidth(int width);
     /**一次添加一個選項*/
     void AddOptions(string option);
+    /**defult color 224*/
+    void SetTitleColor(int color);
+    /**defult color 240*/
+    void SetOptionColor(int color);
+    /**defult color 176*/
+    void SetChoiceColor(int color);
+
+    void ClearOptions();
+
+    void ClearTitle();
+
+    void EraseOptions(const int index);
 
    public:
-    /**回傳name + add_name字串*/
-    static string CreateFilename(string name, string add_name);
     /**讀檔選單，回傳輸入的字串(含)*/
     static string Read_input_filename();
     /**設定顏色，以RGB值表示*/
